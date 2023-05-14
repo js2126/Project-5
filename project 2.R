@@ -2,7 +2,7 @@
 
 data <- read.csv("car_data.csv")
 head(data)
-
+library("ggplot2")
 table(data$name) #car names with multiple quantity
 
 data$mileage <- gsub(' kmpl','',data$mileage)
@@ -63,11 +63,18 @@ ggplot(data_7, aes(x=year,y=selling_price, fill=owner)) +
 #What is the correlation between km driven, how fuel efficient the car is, engine, max power, year and price?
 #install.packages("corrplot")
 library("corrplot")
-library("ggplot2")
-library("corrplot")
 
-data_8 <- data[,c("km_driven","mileage","engine","max_power","year","selling_price")]
-data_8[,1:6] <- sapply(data_8[,1:6], as.numeric)
+data_8 <- data[,c("km_driven","mileage","engine","max_power","year","selling_price","fuel","transmission")]
+
+data_8$fuel <- gsub('Diesel','1',data_8$fuel)
+data_8$fuel <- gsub('Petrol','2',data_8$fuel)
+data_8$fuel <- gsub('LPG','3',data_8$fuel)
+data_8$fuel <- gsub('CNG','4',data_8$fuel)
+
+data_8$transmission <- gsub('Manual','1',data_8$transmission)
+data_8$transmission <- gsub('Automatic','2',data_8$transmission)
+
+data_8[,1:8] <- sapply(data_8[,1:8], as.numeric)
 print(str(data_8))
 data_8 <- na.omit(data_8)
 
@@ -84,12 +91,12 @@ head(data_8a)
 #as year increases, the selling price increases, which means newer cars sell at a higher price
 #the max power and engine are strongly positive correlated, so as max power increases, the engine power increases, these cars also tend to be younger as year and max power are low positive correlated
 
-model_1 <- lm(formula = selling_price ~ year+max_power+engine+mileage+km_driven, data=data_8)
-summary(model_1) #p value is less than 0.01% for all except engine #figure 5
+model_1 <- lm(formula = selling_price ~ year+max_power+engine+mileage+km_driven+fuel+transmission, data=data_8)
+summary(model_1) #p value is less than 0.05% for all except engine #figure 5
 
-model_2 <- lm(formula = selling_price ~ year+max_power+mileage+km_driven, data=data_8)
+model_2 <- lm(formula = selling_price ~ year+max_power+mileage+km_driven+fuel+transmission, data=data_8)
 summary(model_2) #all p-values are less than 0.01% so the independent variables affect the change in selling price
-#R-squared is 0.6366, so 63.66% of the variation of the variables can be explained by the regression model
+#R-squared is 0.6669, so 66.69% of the variation of the variables can be explained by the regression model
 #figure 6
 
 
@@ -98,23 +105,23 @@ plot(model_2,1) #this model is not linear so it is not valid #figure 7
 
 #quadratic transformation
 data_10 <- sqrt(data_8)
-model_4 <- lm(formula = selling_price ~year+max_power+mileage+km_driven,data=data_10)
+model_4 <- lm(formula = selling_price ~year+max_power+mileage+km_driven+fuel+transmission,data=data_10)
 summary(model_4) #figure 8
 plot(model_4,1) #worse than log transformation #figure 9
 
 #Reciprocal transformation
 data_11 <- 1/data_8
 data_11 <- data_11[!is.infinite(rowSums(data_11)),]
-model_5 <- lm(formula = selling_price ~ year+max_power+mileage+km_driven,data=data_11)
+model_5 <- lm(formula = selling_price ~ year+max_power+mileage+km_driven+fuel+transmission,data=data_11)
 summary(model_5) #figure 10
 plot(model_5,1) #worse than log transformation #figure 11
 
 #log transformation
 data_9 <- log(data_8)
 data_9 <- data_9[!is.infinite(rowSums(data_9)),]
-model_3 <- lm(formula = selling_price ~ year+max_power+engine+mileage+km_driven, data=data_9)
+model_3 <- lm(formula = selling_price ~ year+max_power+engine+mileage+km_driven+fuel+transmission, data=data_9)
 summary(model_3) #figure 12
-plot(model_3,1) #this is better, accurately predicts 82.46% of the variation of the variables
+plot(model_3,1) #this is better, accurately predicts 85.71% of the variation of the variables
 #figure 13
 
 qqnorm(data_9$selling_price, main="Normal Q-Q Plot")
@@ -122,13 +129,8 @@ qqline(data_9$selling_price, lwd=2) #most points are around the line
 #now get coefficients and build the multiple linear regression formula, then done
 #figure 14
 
-#putting coefficients from log to normal, we do exponential
-exp(-1615.436011) #intercept is 0
-exp(212.796759)
-exp(13.8229646518)
-
 
 head(data)
 #testing with index 3 car sale
-print(-1615.436011+212.796759*log(2006)+1.031317*log(78)+0.673002*log(1497)+0.345824*log(17.7)-0.089715*log(140000))
-exp(11.99312) #161638.90 selling price estimate, actual was 158000 so was fairly accurate
+print(-1626.57223+214.52326*log(2006)+0.89971*log(78)+0.50877*log(1497)+0.21058*log(17.7)-0.07179*log(140000)-0.19429*log(2)+0.45977*log(1))
+exp(11.90003) #147271 selling price estimate, actual was 158000 so was fairly accurate
